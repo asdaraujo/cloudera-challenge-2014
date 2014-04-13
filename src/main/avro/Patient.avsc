@@ -1,0 +1,10 @@
+{"namespace": "com.pythian",
+ "type": "record",
+ "name": "Patient",
+ "fields": [
+     {"name": "id", "type": "string", "default": ""},
+     {"name": "age", "type": "string", "default": ""},
+     {"name": "gender", "type": "string", "default": ""},
+     {"name": "income", "type": "string", "default": ""}
+ ]
+}

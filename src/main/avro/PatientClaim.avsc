@@ -1,0 +1,9 @@
+{"namespace": "com.pythian",
+ "type": "record",
+ "name": "PatientClaim",
+ "fields": [
+     {"name": "date", "type": "string", "default": ""},
+     {"name": "patient_id", "type": "string", "default": ""},
+     {"name": "claim_id", "type": "string", "default": ""}
+ ]
+}

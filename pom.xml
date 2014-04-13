@@ -75,13 +75,12 @@
       <scope>test</scope>
     </dependency>
 
-<!--
     <dependency>
-      <groupId>org.apache.mahout</groupId>
-      <artifactId>mahout-integration</artifactId>
-      <version>0.9</version>
+      <groupId>org.apache.avro</groupId>
+      <artifactId>avro</artifactId>
+      <version>1.7.6</version>
     </dependency>
--->
+
   </dependencies>
 
   <build>
@@ -105,7 +104,7 @@
           </descriptors>
           <archive>
             <manifest>
-              <mainClass>com.pythian.AsciiDelimiterReader</mainClass>
+              <mainClass>com.pythian.InputProcessJob</mainClass>
             </manifest>
           </archive>
         </configuration>
@@ -119,6 +118,27 @@
           </execution>
         </executions>
       </plugin>
+
+      <plugin>
+        <groupId>org.apache.avro</groupId>
+        <artifactId>avro-maven-plugin</artifactId>
+        <version>1.7.6</version>
+        <executions>
+          <execution>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>schema</goal>
+            </goals>
+            <configuration>
+              <sourceDirectory>${project.basedir}/src/main/avro/</sourceDirectory>
+<!--
+              <outputDirectory>${project.build.directory}/main/java/</outputDirectory>
+-->
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
     </plugins>
   </build>
 
