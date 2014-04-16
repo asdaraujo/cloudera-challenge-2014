@@ -1,5 +1,7 @@
 package com.pythian;
 
+import java.lang.String;
+
 import org.apache.crunch.DoFn;
 import org.apache.crunch.MapFn;
 import org.apache.crunch.Emitter;
@@ -25,6 +27,9 @@ import org.apache.hadoop.io.ArrayWritable;
 import org.apache.mahout.text.wikipedia.XmlInputFormat;
 import org.apache.hadoop.io.BytesWritable;
 
+import org.apache.hadoop.mapreduce.lib.input.CSVNLineInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.ArrayListTextWritable;
+
 import java.nio.ByteBuffer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -32,10 +37,14 @@ import java.util.Map;
 import java.util.HashMap;
 import com.google.common.collect.ImmutableMap;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 /**
  * A word count example for Apache Crunch, based on Crunch's example projects.
  */
 public class InputProcessJob extends Configured implements Tool {
+    private static final Log LOG = LogFactory.getLog(InputProcessJob.class);
 
     //
     // Private methods for the processing of patient procedure claim records (Ascii-delimited format)
@@ -102,6 +111,60 @@ public class InputProcessJob extends Configured implements Tool {
     }
     
     //
+    // Private methods for the processing of inpatient data (CSV format)
+    //
+
+    public static PCollection<InpatientData> mapInpatientData(PCollection<ArrayListTextWritable> lines) {
+        return lines.parallelDo(new MapFn<ArrayListTextWritable, InpatientData>() {
+
+            @Override
+            public InpatientData map(ArrayListTextWritable record) {
+                return InpatientData.newBuilder()
+                    .setDrg(record.get(0).toString())
+                    .setProviderId(record.get(1).toString())
+                    .setProviderName(record.get(2).toString())
+                    .setProviderAddress(record.get(3).toString())
+                    .setProviderCity(record.get(4).toString())
+                    .setProviderState(record.get(5).toString())
+                    .setProviderZipcode(record.get(6).toString())
+                    .setReferralRegion(record.get(7).toString())
+                    .setTotalDischarges(record.get(8).toString())
+                    .setAverageCoveredCharges(record.get(9).toString())
+                    .setAverageTotalPayments(record.get(10).toString())
+                    .build();
+            }
+
+        }, Avros.records(InpatientData.class));
+    }
+    
+    //
+    // Private methods for the processing of outpatient data (CSV format)
+    //
+
+    public static PCollection<OutpatientData> mapOutpatientData(PCollection<ArrayListTextWritable> lines) {
+        return lines.parallelDo(new MapFn<ArrayListTextWritable, OutpatientData>() {
+
+            @Override
+            public OutpatientData map(ArrayListTextWritable record) {
+                return OutpatientData.newBuilder()
+                    .setApc(record.get(0).toString())
+                    .setProviderId(record.get(1).toString())
+                    .setProviderName(record.get(2).toString())
+                    .setProviderAddress(record.get(3).toString())
+                    .setProviderCity(record.get(4).toString())
+                    .setProviderState(record.get(5).toString())
+                    .setProviderZipcode(record.get(6).toString())
+                    .setReferralRegion(record.get(7).toString())
+                    .setOutpatientServices(record.get(8).toString())
+                    .setAverageEstSubmittedCharges(record.get(9).toString())
+                    .setAverageTotalPayments(record.get(10).toString())
+                    .build();
+            }
+
+        }, Avros.records(OutpatientData.class));
+    }
+    
+    //
     // Main methods
     // 
 
@@ -111,18 +174,24 @@ public class InputProcessJob extends Configured implements Tool {
 
     public int run(String[] args) throws Exception {
 
-        if (args.length != 4) {
+        if (args.length != 8) {
             System.err.println("Usage: hadoop jar araujo-ccds2-1.0-SNAPSHOT-job.jar"
-                                      + " [generic options] apc-ascii-input pnt-xml-input output");
+                                      + " [generic options] patient-claims-input patient-profiles-input inpatient-data-input outpatient-data-input" 
+                                      + " patient-claims-output patient-profiles-output inpatient-data-output outpatient-data-output");
             System.err.println();
             GenericOptionsParser.printGenericCommandUsage(System.err);
             return 1;
         }
 
-        String inputPathAscii = args[0];
-        String inputPathXml = args[1];
-        String outputPath = args[2];
-        String outputPath2 = args[3];
+        String patientClaimsInput = args[0];
+        String patientProfilesInput = args[1];
+        String inpatientDataInput = args[2];
+        String outpatientDataInput = args[3];
+
+        String patientClaimsOutput = args[4];
+        String patientProfilesOutput = args[5];
+        String inpatientDataOutput = args[6];
+        String outpatientDataOutput = args[7];
 
         Configuration conf = getConf();
 
@@ -130,18 +199,33 @@ public class InputProcessJob extends Configured implements Tool {
         Pipeline pipeline = new MRPipeline(InputProcessJob.class, getConf());
 
         // Process patient procedure claim records (Ascii-delimited files)
-        TableSource<Long, ArrayWritable> asciiSource = From.formattedFile(inputPathAscii, AsciiDelimitedFileInputFormat.class,
+        TableSource<Long, ArrayWritable> patientClaimsSource = From.formattedFile(patientClaimsInput, AsciiDelimitedFileInputFormat.class,
               Writables.longs(), Writables.writables(ArrayWritable.class));
-        PCollection<PatientClaim> patientClaims = mapArrayToPatientClaim(pipeline.read(asciiSource).values());
-        patientClaims.write(To.avroFile(outputPath));
+        PCollection<PatientClaim> patientClaims = mapArrayToPatientClaim(pipeline.read(patientClaimsSource).values());
+        patientClaims.write(To.avroFile(patientClaimsOutput));
 
         // Process patient profiles (XML files)
         conf.set("xmlinput.start", "<rows>");
         conf.set("xmlinput.end", "</rows>");   
-        TableSource<Long, String> xmlSource = From.formattedFile(inputPathXml, XmlInputFormat.class,
+        TableSource<Long, String> patientProfileSource = From.formattedFile(patientProfilesInput, XmlInputFormat.class,
               Writables.longs(), Writables.strings());
-        PCollection<Patient> patients = parsePatientXml(pipeline.read(xmlSource).values());
-        patients.write(To.avroFile(outputPath2));
+        PCollection<Patient> patients = parsePatientXml(pipeline.read(patientProfileSource).values());
+        patients.write(To.avroFile(patientProfilesOutput));
+
+        // Process inpatient data (CSV files)
+        conf.set("mapreduce.csvinput.delimiter", "\"");
+        conf.set("mapreduce.csvinput.separator", ",");
+        conf.setInt("mapreduce.csvinput.skiplines", 1);
+        TableSource<Long, ArrayListTextWritable> inpatientCsvSource = From.formattedFile(inpatientDataInput, CSVNLineInputFormat.class,
+              Writables.longs(), Writables.writables(ArrayListTextWritable.class));
+        PCollection<InpatientData> inpatientRecords = mapInpatientData(pipeline.read(inpatientCsvSource).values());
+        inpatientRecords.write(To.avroFile(inpatientDataOutput));
+
+        // Process outpatient data (CSV files)
+        TableSource<Long, ArrayListTextWritable> outpatientCsvSource = From.formattedFile(outpatientDataInput, CSVNLineInputFormat.class,
+              Writables.longs(), Writables.writables(ArrayListTextWritable.class));
+        PCollection<OutpatientData> outpatientRecords = mapOutpatientData(pipeline.read(outpatientCsvSource).values());
+        outpatientRecords.write(To.avroFile(outpatientDataOutput));
 
         // Execute the pipeline as a MapReduce.
         PipelineResult result = pipeline.done();

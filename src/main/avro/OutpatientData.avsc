@@ -1,0 +1,17 @@
+{"namespace": "com.pythian",
+ "type": "record",
+ "name": "OutpatientData",
+ "fields": [
+     {"name": "apc", "type": "string", "default": ""},
+     {"name": "provider_id", "type": "string", "default": ""},
+     {"name": "provider_name", "type": "string", "default": ""},
+     {"name": "provider_address", "type": "string", "default": ""},
+     {"name": "provider_city", "type": "string", "default": ""},
+     {"name": "provider_state", "type": "string", "default": ""},
+     {"name": "provider_zipcode", "type": "string", "default": ""},
+     {"name": "referral_region", "type": "string", "default": ""},
+     {"name": "outpatient_services", "type": "string", "default": ""},
+     {"name": "average_est_submitted_charges", "type": "string", "default": ""},
+     {"name": "average_total_payments", "type": "string", "default": ""}
+ ]
+}

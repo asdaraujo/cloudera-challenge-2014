@@ -27,7 +27,6 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  * 
  */
 public class CSVNLineInputFormat extends FileInputFormat<LongWritable, List<Text>> {
-
 	public static final String LINES_PER_MAP = "mapreduce.input.lineinputformat.linespermap";
 
 	public static final int DEFAULT_LINES_PER_MAP = 1;
@@ -59,6 +58,7 @@ public class CSVNLineInputFormat extends FileInputFormat<LongWritable, List<Text
 	 * 
 	 * @see FileInputFormat#getSplits(JobContext)
 	 */
+        @Override
 	public List<InputSplit> getSplits(JobContext job) throws IOException {
 		List<InputSplit> splits = new ArrayList<InputSplit>();
 		int numLinesPerSplit = getNumLinesPerSplit(job);
