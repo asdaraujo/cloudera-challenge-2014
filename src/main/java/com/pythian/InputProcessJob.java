@@ -40,9 +40,6 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-/**
- * A word count example for Apache Crunch, based on Crunch's example projects.
- */
 public class InputProcessJob extends Configured implements Tool {
     private static final Log LOG = LogFactory.getLog(InputProcessJob.class);
 
