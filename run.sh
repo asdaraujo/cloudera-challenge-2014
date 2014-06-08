@@ -1,22 +1,40 @@
 #!/bin/bash
 
-readonly OUTPUT_DIR=${1:-ccoutput}
+readonly DB_NAME=${1:-$USER}
+echo "Hive db name: $DB_NAME"
+readonly OUTPUT_DIR=${2:-hdfs://$( hdfs getconf -nnRpcAddresses )/user/$USER/ccoutput}
 echo "Output dir: $OUTPUT_DIR"
+readonly SCHEMA_DIR=${3:-hdfs://$( hdfs getconf -nnRpcAddresses )/user/$USER/schema}
+echo "Schema dir: $SCHEMA_DIR"
+readonly RESULTS_DIR=${4:-results}
+echo "Results dir: $RESULTS_DIR"
 
-hdfs dfs -stat $OUTPUT_DIR > /dev/null 2>&1
-if [ $? == 0 ]; then
-  echo "ERROR: Output dir already exists."
-  exit 1
+#hdfs dfs -stat $OUTPUT_DIR > /dev/null 2>&1
+#if [ $? == 0 ]; then
+#  hdfs dfs -mv $OUTPUT_DIR $OUTPUT_DIR.$( date +%Y%m%d%H%M%S )
+#fi
+#hdfs dfs -mkdir -p $OUTPUT_DIR
+#
+#hadoop jar target/araujo-ccds2-1.0-SNAPSHOT-job.jar \
+#  ccinput/patientclaim \
+#  ccinput/patient \
+#  ccinput/inpatient_unzipped \
+#  ccinput/outpatient \
+#  $OUTPUT_DIR/patientclaim \
+#  $OUTPUT_DIR/patient \
+#  $OUTPUT_DIR/inpatient \
+#  $OUTPUT_DIR/outpatient
+
+#hive -v -f scripts/cleanupHive.hql
+#hive -v -f scripts/setupHive.hql -hivevar dbname=$DB_NAME -hivevar outputdir=$OUTPUT_DIR -hivevar schemadir=$SCHEMA_DIR
+
+# check for results dir
+if [ -d "$RESULTS_DIR" ]; then
+  mv "$RESULTS_DIR" "$RESULTS_DIR.$( date +%Y%m%d%H%M%S )"
 fi
-hdfs dfs -mkdir -p $OUTPUT_DIR
+mkdir "$RESULTS_DIR"
 
-hadoop jar target/araujo-ccds2-1.0-SNAPSHOT-job.jar \
-  ccinput/patientclaim \
-  ccinput/patient \
-  ccinput/inpatient_unzipped \
-  ccinput/outpatient \
-  $OUTPUT_DIR/patientclaim \
-  $OUTPUT_DIR/patient \
-  $OUTPUT_DIR/inpatient \
-  $OUTPUT_DIR/outpatient
+# part 1a
+hive --database $DB_NAME -f scripts/part1a.hql > $RESULTS_DIR/part1a.csv
+
 

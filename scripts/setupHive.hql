@@ -1,50 +1,50 @@
-dfs -mkdir schema/;
-dfs -copyFromLocal src/main/avro/Patient.avsc schema/;
-dfs -copyFromLocal src/main/avro/PatientClaim.avsc schema/;
-dfs -copyFromLocal src/main/avro/InpatientData.avsc schema/;
-dfs -copyFromLocal src/main/avro/OutpatientData.avsc schema/;
+dfs -mkdir ${schemadir};
+dfs -copyFromLocal src/main/avro/Patient.avsc ${schemadir}/;
+dfs -copyFromLocal src/main/avro/PatientClaim.avsc ${schemadir}/;
+dfs -copyFromLocal src/main/avro/InpatientData.avsc ${schemadir}/;
+dfs -copyFromLocal src/main/avro/OutpatientData.avsc ${schemadir}/;
 
-CREATE EXTERNAL TABLE araujo.patient
+CREATE EXTERNAL TABLE ${dbname}.patient
   ROW FORMAT SERDE
   'org.apache.hadoop.hive.serde2.avro.AvroSerDe'
   STORED AS INPUTFORMAT
   'org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat'
   OUTPUTFORMAT
   'org.apache.hadoop.hive.ql.io.avro.AvroContainerOutputFormat'
-  LOCATION 'hdfs:///user/araujo/ccoutput/patient'
+  LOCATION '${outputdir}/patient'
   TBLPROPERTIES (
-    'avro.schema.url'='hdfs:///user/araujo/schema/Patient.avsc');
+    'avro.schema.url'='${schemadir}/Patient.avsc');
 
-CREATE EXTERNAL TABLE araujo.patientClaim
+CREATE EXTERNAL TABLE ${dbname}.patientClaim
   ROW FORMAT SERDE
   'org.apache.hadoop.hive.serde2.avro.AvroSerDe'
   STORED AS INPUTFORMAT
   'org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat'
   OUTPUTFORMAT
   'org.apache.hadoop.hive.ql.io.avro.AvroContainerOutputFormat'
-  LOCATION 'hdfs:///user/araujo/ccoutput/patientclaim'
+  LOCATION '${outputdir}/patientclaim'
   TBLPROPERTIES (
-    'avro.schema.url'='hdfs:///user/araujo/schema/PatientClaim.avsc');
+    'avro.schema.url'='${schemadir}/PatientClaim.avsc');
 
-CREATE EXTERNAL TABLE araujo.inpatientData
+CREATE EXTERNAL TABLE ${dbname}.inpatientData
   ROW FORMAT SERDE
   'org.apache.hadoop.hive.serde2.avro.AvroSerDe'
   STORED AS INPUTFORMAT
   'org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat'
   OUTPUTFORMAT
   'org.apache.hadoop.hive.ql.io.avro.AvroContainerOutputFormat'
-  LOCATION 'hdfs:///user/araujo/ccoutput/inpatient'
+  LOCATION '${outputdir}/inpatient'
   TBLPROPERTIES (
-    'avro.schema.url'='hdfs:///user/araujo/schema/InpatientData.avsc');
+    'avro.schema.url'='${schemadir}/InpatientData.avsc');
 
-CREATE EXTERNAL TABLE araujo.outpatientData
+CREATE EXTERNAL TABLE ${dbname}.outpatientData
   ROW FORMAT SERDE
   'org.apache.hadoop.hive.serde2.avro.AvroSerDe'
   STORED AS INPUTFORMAT
   'org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat'
   OUTPUTFORMAT
   'org.apache.hadoop.hive.ql.io.avro.AvroContainerOutputFormat'
-  LOCATION 'hdfs:///user/araujo/ccoutput/outpatient'
+  LOCATION '${outputdir}/outpatient'
   TBLPROPERTIES (
-    'avro.schema.url'='hdfs:///user/araujo/schema/OutpatientData.avsc');
+    'avro.schema.url'='${schemadir}/OutpatientData.avsc');
 
