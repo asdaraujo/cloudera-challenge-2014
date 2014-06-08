@@ -38,5 +38,11 @@ echo "Results dir: $RESULTS_DIR"
 #hive --database $DB_NAME -f scripts/part1a.hql > $RESULTS_DIR/part1a.csv
 
 # part 1b
-hive --database $DB_NAME -f scripts/part1b.hql > $RESULTS_DIR/part1b.csv
+#hive --database $DB_NAME -f scripts/part1b.hql > $RESULTS_DIR/part1b.csv
+
+# part 1c
+#hive --database $DB_NAME -f scripts/part1c.hql > $RESULTS_DIR/part1c.csv
+
+# part 1d
+hive --database $DB_NAME -f scripts/part1d.hql > $RESULTS_DIR/part1d.csv
 
