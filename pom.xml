@@ -33,6 +33,16 @@
       <version>2.2.0</version>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.mahout</groupId>
+      <artifactId>mahout-core</artifactId>
+      <version>0.9</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.mahout</groupId>
+      <artifactId>mahout-math</artifactId>
+      <version>0.9</version>
+    </dependency>
 
     <!-- The following libraries come with Hadoop but are missing from
          the client POM. You need them if you want to use LocalJobRunner
@@ -83,6 +93,13 @@
 
   </dependencies>
 
+  <repositories>
+    <repository>
+        <id>Maven repo</id>
+        <url>http://repo1.maven.org/maven2</url>
+    </repository>
+  </repositories>
+
   <build>
     <plugins>
       <plugin>
@@ -103,9 +120,11 @@
             <descriptor>src/main/assembly/hadoop-job.xml</descriptor>
           </descriptors>
           <archive>
+          <!--
             <manifest>
               <mainClass>com.pythian.InputProcessJob</mainClass>
             </manifest>
+          -->
           </archive>
         </configuration>
         <executions>
