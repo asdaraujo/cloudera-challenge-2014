@@ -1,4 +1,4 @@
-package com.pythian;
+package com.asdaraujo;
 
 import org.apache.crunch.PCollection;
 import org.apache.crunch.PTable;

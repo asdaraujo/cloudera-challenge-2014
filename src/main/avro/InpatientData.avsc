@@ -1,4 +1,4 @@
-{"namespace": "com.pythian",
+{"namespace": "com.asdaraujo",
  "type": "record",
  "name": "InpatientData",
  "fields": [
