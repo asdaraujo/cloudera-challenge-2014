@@ -1,2 +1,10 @@
+# target dir
 target
+
+# vi transient files
 *.swp
+
+# stat store and derby log
+TempStatsStore
+derby.log
+
