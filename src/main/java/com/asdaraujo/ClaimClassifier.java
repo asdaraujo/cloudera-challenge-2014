@@ -34,6 +34,7 @@ import org.apache.lucene.util.Version;
 import org.apache.mahout.classifier.sgd.L1;
 import org.apache.mahout.classifier.sgd.OnlineLogisticRegression;
 import org.apache.mahout.math.DenseVector;
+import org.apache.mahout.math.Matrix;
 import org.apache.mahout.math.RandomAccessSparseVector;
 import org.apache.mahout.math.Vector;
 import org.apache.mahout.vectorizer.encoders.ConstantValueEncoder;
@@ -200,6 +201,22 @@ public class ClaimClassifier {
             learningAlgorithm.close();
         }
 
+        Matrix beta = learningAlgorithm.getBeta();
+        System.out.println(String.format("Matrix: %d x %d", beta.rowSize(), beta.columnSize()));
+
+        System.out.println("Trace dictionary:");
+        for(String key : traceDictionary.keySet()) {
+            Set<Integer> positions = traceDictionary.get(key);
+            StringBuilder sb = null;
+            for(int pos : positions) {
+                String coef = String.format("%7.3f", beta.get(0, pos));
+                if (sb == null)
+                    sb = new StringBuilder(coef);
+                else
+                    sb.append("," + coef);
+            }
+            System.out.println(String.format("%-20s: %-20s %s", key, positions, sb.toString()));
+        }
     }
 
     public static void main(String[] args) throws IOException {
