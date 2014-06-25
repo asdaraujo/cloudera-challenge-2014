@@ -39,34 +39,35 @@ import org.apache.mahout.vectorizer.encoders.StaticWordValueEncoder;
 public class ClaimClassifier {
     private static final int FEATURES = 10000;
 
-    private Map<String, Set<Integer>> traceDictionary;
-    private FeatureVectorEncoder biasEnc;
-    private FeatureVectorEncoder ageEnc;
-    private FeatureVectorEncoder genderEnc;
-    private FeatureVectorEncoder incomeEnc;
-    private FeatureVectorEncoder inpatientEnc;
-    private FeatureVectorEncoder outpatientEnc;
-    private FeatureVectorEncoder claimEnc;
+//    private Map<String, Set<Integer>> traceDictionary;
+//    private FeatureVectorEncoder biasEnc;
+//    private FeatureVectorEncoder ageEnc;
+//    private FeatureVectorEncoder genderEnc;
+//    private FeatureVectorEncoder incomeEnc;
+//    private FeatureVectorEncoder inpatientEnc;
+//    private FeatureVectorEncoder outpatientEnc;
+//    private FeatureVectorEncoder claimEnc;
     private List<Pair<Integer,Vector>> vectors;
     private OnlineLogisticRegression learningAlgorithm;
+    private PatientClaimReader claimReader;
 
     public ClaimClassifier() {
-        this.traceDictionary = new TreeMap<String, Set<Integer>>();
-        this.biasEnc = new ConstantValueEncoder("bias");
-        this.biasEnc.setTraceDictionary(this.traceDictionary);
-        this.ageEnc = new StaticWordValueEncoder("age");
-        this.ageEnc.setTraceDictionary(this.traceDictionary);
-        this.genderEnc = new StaticWordValueEncoder("gender");
-        this.genderEnc.setTraceDictionary(this.traceDictionary);
-        this.incomeEnc = new StaticWordValueEncoder("income");
-        this.incomeEnc.setTraceDictionary(this.traceDictionary);
-        this.inpatientEnc = new ConstantValueEncoder("inpatient");
-        this.inpatientEnc.setTraceDictionary(this.traceDictionary);
-        this.outpatientEnc = new ConstantValueEncoder("outpatient");
-        this.outpatientEnc.setTraceDictionary(this.traceDictionary);
-        this.claimEnc = new StaticWordValueEncoder("claim");
-        this.claimEnc.setProbes(2);
-        this.claimEnc.setTraceDictionary(this.traceDictionary);
+        //this.traceDictionary = new TreeMap<String, Set<Integer>>();
+        //this.biasEnc = new ConstantValueEncoder("bias");
+        //this.biasEnc.setTraceDictionary(this.traceDictionary);
+        //this.ageEnc = new StaticWordValueEncoder("age");
+        //this.ageEnc.setTraceDictionary(this.traceDictionary);
+        //this.genderEnc = new StaticWordValueEncoder("gender");
+        //this.genderEnc.setTraceDictionary(this.traceDictionary);
+        //this.incomeEnc = new StaticWordValueEncoder("income");
+        //this.incomeEnc.setTraceDictionary(this.traceDictionary);
+        //this.inpatientEnc = new ConstantValueEncoder("inpatient");
+        //this.inpatientEnc.setTraceDictionary(this.traceDictionary);
+        //this.outpatientEnc = new ConstantValueEncoder("outpatient");
+        //this.outpatientEnc.setTraceDictionary(this.traceDictionary);
+        //this.claimEnc = new StaticWordValueEncoder("claim");
+        //this.claimEnc.setProbes(2);
+        //this.claimEnc.setTraceDictionary(this.traceDictionary);
 
         this.learningAlgorithm =
             new OnlineLogisticRegression(
@@ -76,14 +77,13 @@ public class ClaimClassifier {
                 .lambda(3.0e-5)
                 .learningRate(20);
 
+        this.claimReader = new PatientClaimReader(FEATURES, 2);
+
         this.vectors = new ArrayList<Pair<Integer,Vector>>();
     }
 
     public void run(String inputFile) throws IOException {
-        Configuration conf = new Configuration();
-        FileSystem fs = FileSystem.get(conf);
-
-        readPoints(inputFile, conf);
+        readPoints(inputFile);
         train();
     }
 
@@ -101,48 +101,52 @@ public class ClaimClassifier {
         return Double.valueOf(getAsString(ref));
     }
 
-    public void readPoints(String inputFile, Configuration conf) throws IOException {
-        System.out.println("Reading points from: " + inputFile);
-
-        List<Vector> points = new ArrayList<Vector>();
-        FileSystem fs = FileSystem.get(conf);
-        Path inputPath = new Path(inputFile);
-        RCFile.Reader reader = new RCFile.Reader(fs, inputPath, 104857600, conf, 0, fs.getFileStatus(inputPath).getLen());
-
-        Dictionary keys = new Dictionary();
-        LongWritable rows = new LongWritable();
-        BytesRefArrayWritable row = new BytesRefArrayWritable();
-        int idx = 3;
-        while (reader.next(rows)) {
-            if (rows.get() % 1000 == 0)
-                System.out.println(String.format("%d records read", rows.get()));
-            reader.getCurrentRow(row);
-            String id = getAsString(row.get(0));
-            String review = getAsString(row.get(1));
-            String age = getAsString(row.get(2));
-            String gender = getAsString(row.get(3));
-            String income = getAsString(row.get(4));
-            double typeI = getAsDouble(row.get(5));
-            double typeO = getAsDouble(row.get(6));
-            String[] claims = getAsString(row.get(7)).split(",");
-
-            //System.out.println(String.format("%s:%s:%s:%s:%s:%f:%f:%s", id, review, age, gender, income, typeI, typeO, claims.toString()));
-
-            Vector v = new RandomAccessSparseVector(FEATURES);
-            biasEnc.addToVector((String)null, 1, v);
-            ageEnc.addToVector(age, 1, v);
-            genderEnc.addToVector(gender, 1, v);
-            incomeEnc.addToVector(income, 1, v);
-            inpatientEnc.addToVector((String)null, typeI, v);
-            outpatientEnc.addToVector((String)null, typeO, v);
-            for(int i = 0; i < claims.length; i += 2) {
-                claimEnc.addToVector(claims[i], Double.valueOf(claims[i+1]), v);
-            }
-
-            this.vectors.add(new ImmutablePair(keys.intern(review),v));
-        }
-        reader.close();
+    public void readPoints(String inputFile) throws IOException {
+        this.vectors = this.claimReader.readPoints(inputFile);
     }
+
+//    public void readPoints2(String inputFile, Configuration conf) throws IOException {
+//        System.out.println("Reading points from: " + inputFile);
+//
+//        List<Vector> points = new ArrayList<Vector>();
+//        FileSystem fs = FileSystem.get(conf);
+//        Path inputPath = new Path(inputFile);
+//        RCFile.Reader reader = new RCFile.Reader(fs, inputPath, 104857600, conf, 0, fs.getFileStatus(inputPath).getLen());
+//
+//        Dictionary keys = new Dictionary();
+//        LongWritable rows = new LongWritable();
+//        BytesRefArrayWritable row = new BytesRefArrayWritable();
+//        int idx = 3;
+//        while (reader.next(rows)) {
+//            if (rows.get() % 1000 == 0)
+//                System.out.println(String.format("%d records read", rows.get()));
+//            reader.getCurrentRow(row);
+//            String id = getAsString(row.get(0));
+//            String review = getAsString(row.get(1));
+//            String age = getAsString(row.get(2));
+//            String gender = getAsString(row.get(3));
+//            String income = getAsString(row.get(4));
+//            double typeI = getAsDouble(row.get(5));
+//            double typeO = getAsDouble(row.get(6));
+//            String[] claims = getAsString(row.get(7)).split(",");
+//
+//            //System.out.println(String.format("%s:%s:%s:%s:%s:%f:%f:%s", id, review, age, gender, income, typeI, typeO, claims.toString()));
+//
+//            Vector v = new RandomAccessSparseVector(FEATURES);
+//            biasEnc.addToVector((String)null, 1, v);
+//            ageEnc.addToVector(age, 1, v);
+//            genderEnc.addToVector(gender, 1, v);
+//            incomeEnc.addToVector(income, 1, v);
+//            inpatientEnc.addToVector((String)null, typeI, v);
+//            outpatientEnc.addToVector((String)null, typeO, v);
+//            for(int i = 0; i < claims.length; i += 2) {
+//                claimEnc.addToVector(claims[i], Double.valueOf(claims[i+1]), v);
+//            }
+//
+//            this.vectors.add(new ImmutablePair(keys.intern(review),v));
+//        }
+//        reader.close();
+//    }
 
     public void train() {
         Collections.shuffle(this.vectors);
@@ -188,8 +192,8 @@ public class ClaimClassifier {
         System.out.println(String.format("Matrix: %d x %d", beta.rowSize(), beta.columnSize()));
 
         System.out.println("Trace dictionary:");
-        for(String key : traceDictionary.keySet()) {
-            Set<Integer> positions = traceDictionary.get(key);
+        for(String key : this.claimReader.getTraceDictionary().keySet()) {
+            Set<Integer> positions = this.claimReader.getTraceDictionary().get(key);
             StringBuilder sb = null;
             for(int pos : positions) {
                 String coef = String.format("%7.3f", beta.get(0, pos));
@@ -208,13 +212,5 @@ public class ClaimClassifier {
         cc.run(inputFile);
     }
 
-    private static void countWords(Analyzer analyzer, Collection<String> words, Reader in) throws IOException {
-        TokenStream ts = analyzer.tokenStream("text", in);
-        ts.addAttribute(CharTermAttribute.class);
-        while (ts.incrementToken()) {
-            String s = ts.getAttribute(CharTermAttribute.class).toString();
-            words.add(s);
-        }
-    }
 }
 
