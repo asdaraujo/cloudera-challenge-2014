@@ -30,14 +30,12 @@ public class KMeansClaims extends KMeansDriver implements Tool {
     private static final int FEATURES = 10000;
     private static final int LABELS = 2;
 
-    private PatientClaimReader claimReader;
     private FileSystem fs;
     private Configuration conf;
     private Map<String,Integer> claimLabels;
     private int k;
 
     public KMeansClaims() throws IOException {
-        this.claimReader = new PatientClaimReader(FEATURES, 2);
     }
 
     public void writeVectorsToFile(List<Pair<Integer,NamedVector>> vectors,
@@ -80,14 +78,14 @@ public class KMeansClaims extends KMeansDriver implements Tool {
 
         // count occurrences for cluster:label
         int[][] counts = new int[k][LABELS];
-        for(int c = 0; c <= 1; c++)
-            for(int l = 0; l <= 1; l++)
+        for(int c = 0; c < k; c++)
+            for(int l = 0; l < LABELS; l++)
                 counts[c][l] = 0;
 
         // creates one writer for each class (cluster + label)
         SequenceFile.Writer[][] writers = new SequenceFile.Writer[k][LABELS];
-        for(int c = 0; c <= 1; c++)
-            for(int l = 0; l <= 1; l++) {
+        for(int c = 0; c < k; c++)
+            for(int l = 0; l < LABELS; l++) {
                 Path path = new Path(String.format("%s/cluster=%d/label=%d/part-00000", outputDir, c, l));
                 writers[c][l] = new SequenceFile.Writer(this.fs, this.conf,
                     path, LongWritable.class, Text.class);
@@ -111,12 +109,12 @@ public class KMeansClaims extends KMeansDriver implements Tool {
                     double d = Double.valueOf(value.getProperties().get(dist).toString());
                     int label = this.claimLabels.get(vec.getName());
                     int cluster = key.get();
-                    //System.out.println(String.format("%s,%.15f,%.2f,%d,%d", 
+                    //System.out.printf("%s,%.15f,%.2f,%d,%d\n", 
                     //    vec.getName(),
                     //    d,
                     //    value.getWeight(),
                     //    label,
-                    //    cluster));
+                    //    cluster);
                     counts[cluster][label]++;
 
                     // write id to correct file
@@ -135,10 +133,10 @@ public class KMeansClaims extends KMeansDriver implements Tool {
 
         // close writers
         System.out.println("");
-        for(int c = 0; c <= 1; c++)
-            for(int l = 0; l <= 1; l++) {
+        for(int c = 0; c < k; c++)
+            for(int l = 0; l < LABELS; l++) {
                 writers[c][l].close();
-                System.out.println(String.format("Points for cluster %d and label %d stored in: %s/cluster=%d/label=%d/part-00000", c, l, outputDir, c, l));
+                System.out.printf("Points for cluster %d and label %d stored in: %s/cluster=%d/label=%d/part-00000\n", c, l, outputDir, c, l);
             }
     }
 
@@ -146,8 +144,8 @@ public class KMeansClaims extends KMeansDriver implements Tool {
         int[] clusterCnt = new int[k];
         int[] labelCnt = new int[LABELS];
         // compute total per cluster and label
-        for(int c = 0; c <= 1; c++) {
-            for(int l = 0; l <= 1; l++) {
+        for(int c = 0; c < k; c++) {
+            for(int l = 0; l < LABELS; l++) {
                 if (c == 0 && l == 0) {
                     clusterCnt[c] = counts[c][l];
                     labelCnt[l] = counts[c][l];
@@ -158,16 +156,17 @@ public class KMeansClaims extends KMeansDriver implements Tool {
             }
         }
         // print stats
-        for(int c = 0; c <= 1; c++)
-            for(int l = 0; l <= 1; l++)
-                System.out.println(String.format("%sCluster %d, Label %d:  %10d points, "
-                    + "%7.3f%% of this cluster, %7.3f%% of this label", (l == 0) ? "\n" : "", c, l,
-                    counts[c][l], (100.0*counts[c][l])/clusterCnt[c], (100.0*counts[c][l])/labelCnt[l]));
+        for(int c = 0; c < k; c++)
+            for(int l = 0; l < LABELS; l++)
+                System.out.printf("%sCluster %d, Label %d:  %10d points, "
+                    + "%7.3f%% of this cluster, %7.3f%% of this label\n", (l == 0) ? "\n" : "", c, l,
+                    counts[c][l], (100.0*counts[c][l])/clusterCnt[c], (100.0*counts[c][l])/labelCnt[l]);
     }
 
     public void runClustering(int k, int iterations, String inputDir, String workDir, String mahoutDir) throws Exception {
 
-        List<Pair<Integer,NamedVector>> vectors = this.claimReader.readPoints(inputDir);
+        PatientClaimReader claimReader = new PatientClaimReader(inputDir, FEATURES, 2);
+        List<Pair<Integer,NamedVector>> vectors = claimReader.readPoints(500000);
 
         String pointsDir = workDir + "/points";
         String clustersDir = workDir + "/clusters";

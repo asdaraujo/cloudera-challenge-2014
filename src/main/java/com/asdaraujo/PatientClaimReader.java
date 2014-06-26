@@ -2,6 +2,7 @@ package com.asdaraujo;
 
 import com.google.common.base.Charsets;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +33,7 @@ public class PatientClaimReader {
     private static final int READ_BUFFER = 104857600;
 
     private int numFeatures;
+    private int probes;
     private Map<String, Set<Integer>> traceDictionary;
     private FeatureVectorEncoder biasEnc;
     private FeatureVectorEncoder ageEnc;
@@ -40,10 +42,27 @@ public class PatientClaimReader {
     private FeatureVectorEncoder inpatientEnc;
     private FeatureVectorEncoder outpatientEnc;
     private FeatureVectorEncoder claimEnc;
-    private List<Pair<Integer,NamedVector>> vectors;
+    private RemoteIterator<LocatedFileStatus> files = null;
+    private RCFile.Reader reader = null;
+    private int recordCount = 0;
+    private Configuration conf;
+    private FileSystem fs;
+    private LongWritable rows;
+    private BytesRefArrayWritable row;
 
-    public PatientClaimReader(int numFeatures, int probes) {
+    public PatientClaimReader(String inputDir, int numFeatures, int probes) throws IOException, FileNotFoundException {
         this.numFeatures = numFeatures;
+        this.probes = probes;
+        clear();
+
+        this.conf = new Configuration();
+        this.fs = FileSystem.get(this.conf);
+        this.files = this.fs.listFiles(new Path(inputDir), false);
+        this.rows = new LongWritable();
+        this.row = new BytesRefArrayWritable();
+    }
+
+    private void clear() {
         this.traceDictionary = new TreeMap<String, Set<Integer>>();
         this.biasEnc = new ConstantValueEncoder("bias");
         this.biasEnc.setTraceDictionary(this.traceDictionary);
@@ -58,10 +77,8 @@ public class PatientClaimReader {
         this.outpatientEnc = new ConstantValueEncoder("outpatient");
         this.outpatientEnc.setTraceDictionary(this.traceDictionary);
         this.claimEnc = new StaticWordValueEncoder("claim");
-        this.claimEnc.setProbes(probes);
+        this.claimEnc.setProbes(this.probes);
         this.claimEnc.setTraceDictionary(this.traceDictionary);
-
-        this.vectors = new ArrayList<Pair<Integer,NamedVector>>();
     }
 
     private static String getAsString(BytesRefWritable ref) {
@@ -82,33 +99,30 @@ public class PatientClaimReader {
         return Double.valueOf(getAsString(ref));
     }
 
-    public List<Pair<Integer,NamedVector>> readPoints(String inputDir) throws IOException {
-        Configuration conf = new Configuration();
-        FileSystem fs = FileSystem.get(conf);
+    public List<Pair<Integer,NamedVector>> readPoints(int maxRecords) throws IOException {
+        List<Pair<Integer,NamedVector>> vectors = new ArrayList<Pair<Integer,NamedVector>>();
+        while(this.files.hasNext() || this.reader != null) {
+            if (this.reader == null) {
+                Path inputFile = this.files.next().getPath();
+                System.out.println("\nReading points from: " + inputFile.toString());
+    
+                this.reader = new RCFile.Reader(this.fs, inputFile,
+                    READ_BUFFER, this.conf, 0, fs.getFileStatus(inputFile).getLen());
+            }
 
-        RemoteIterator<LocatedFileStatus> files = fs.listFiles(new Path(inputDir), false);
-        while(files.hasNext()) {
-            Path inputFile = files.next().getPath();
-            System.out.println("Reading points from: " + inputFile.toString());
-    
-            RCFile.Reader reader = new RCFile.Reader(fs, inputFile,
-                READ_BUFFER, conf, 0, fs.getFileStatus(inputFile).getLen());
-    
-            Dictionary keys = new Dictionary();
-            LongWritable rows = new LongWritable();
-            BytesRefArrayWritable row = new BytesRefArrayWritable();
-            while (reader.next(rows)) {
-                if (rows.get() % 1000 == 0)
+            while (reader.next(this.rows)) {
+                if (this.rows.get() % 1000 == 0)
                     System.out.print(".");
-                reader.getCurrentRow(row);
-                String id = getAsString(row.get(0));
-                int review = getAsInteger(row.get(1));
-                String age = getAsString(row.get(2));
-                String gender = getAsString(row.get(3));
-                String income = getAsString(row.get(4));
-                double typeI = getAsDouble(row.get(5));
-                double typeO = getAsDouble(row.get(6));
-                String[] claims = getAsString(row.get(7)).split(",");
+                reader.getCurrentRow(this.row);
+                this.recordCount++;
+                String id = getAsString(this.row.get(0));
+                int review = getAsInteger(this.row.get(1));
+                String age = getAsString(this.row.get(2));
+                String gender = getAsString(this.row.get(3));
+                String income = getAsString(this.row.get(4));
+                double typeI = getAsDouble(this.row.get(5));
+                double typeO = getAsDouble(this.row.get(6));
+                String[] claims = getAsString(this.row.get(7)).split(",");
     
                 Vector v = new RandomAccessSparseVector(this.numFeatures);
                 this.biasEnc.addToVector((String)null, 1, v);
@@ -121,13 +135,19 @@ public class PatientClaimReader {
                     this.claimEnc.addToVector(claims[i], Double.valueOf(claims[i+1]), v);
                 }
     
-                this.vectors.add(new ImmutablePair(review, new NamedVector(v, id)));
+                vectors.add(new ImmutablePair(review, new NamedVector(v, id)));
+                if (vectors.size() >= maxRecords) {
+                    System.out.println("");
+                    return vectors;
+                }
             }
             reader.close();
-            System.out.println(String.format("\n  %d records were loaded", rows.get()));
+            reader = null;
+            System.out.println("");
         }
+        System.out.printf("\n%d records were read successfully from file.\n", this.recordCount);
 
-        return this.vectors;
+        return vectors;
     }
 
     public Map<String, Set<Integer>> getTraceDictionary() {
