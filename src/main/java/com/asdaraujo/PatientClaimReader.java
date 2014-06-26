@@ -74,6 +74,10 @@ public class PatientClaimReader {
         }
     }
 
+    private static int getAsInteger(BytesRefWritable ref) {
+        return Integer.valueOf(getAsString(ref));
+    }
+
     private static double getAsDouble(BytesRefWritable ref) {
         return Double.valueOf(getAsString(ref));
     }
@@ -95,10 +99,10 @@ public class PatientClaimReader {
             BytesRefArrayWritable row = new BytesRefArrayWritable();
             while (reader.next(rows)) {
                 if (rows.get() % 1000 == 0)
-                    System.out.println(String.format("%d records read", rows.get()));
+                    System.out.print(".");
                 reader.getCurrentRow(row);
                 String id = getAsString(row.get(0));
-                String review = getAsString(row.get(1));
+                int review = getAsInteger(row.get(1));
                 String age = getAsString(row.get(2));
                 String gender = getAsString(row.get(3));
                 String income = getAsString(row.get(4));
@@ -117,9 +121,10 @@ public class PatientClaimReader {
                     this.claimEnc.addToVector(claims[i], Double.valueOf(claims[i+1]), v);
                 }
     
-                this.vectors.add(new ImmutablePair(keys.intern(review), new NamedVector(v, id)));
+                this.vectors.add(new ImmutablePair(review, new NamedVector(v, id)));
             }
             reader.close();
+            System.out.println(String.format("\n  %d records were loaded", rows.get()));
         }
 
         return this.vectors;
