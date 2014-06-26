@@ -3,9 +3,11 @@ package com.asdaraujo;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Hashtable;
 import java.util.List;
-
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -26,24 +28,51 @@ import org.apache.mahout.math.RandomAccessSparseVector;
 import org.apache.mahout.math.Vector;
 import org.apache.mahout.math.VectorWritable;
 
-public class KMeansProcedures {
-  
-    public void writePointsToFile(List<Vector> points,
-                                  String fileName,
-                                  FileSystem fs,
-                                  Configuration conf) throws IOException {
+public class KMeansClaims {
+    private static final int FEATURES = 10000;
+
+    private PatientClaimReader claimReader;
+    private FileSystem fs;
+    private Configuration conf;
+    private int k;
+
+    public KMeansClaims(int k) throws IOException {
+        this.claimReader = new PatientClaimReader(FEATURES, 2);
+        this.conf = new Configuration();
+        this.fs = FileSystem.get(conf);
+        this.k = k;
+    }
+
+    public void writeVectorsToFile(List<Pair<Integer,Vector>> vectors,
+                                   String fileName) throws IOException {
         Path path = new Path(fileName);
-        SequenceFile.Writer writer = new SequenceFile.Writer(fs, conf,
+        SequenceFile.Writer writer = new SequenceFile.Writer(this.fs, this.conf,
             path, LongWritable.class, VectorWritable.class);
-        long recNum = 0;
+        LongWritable key = new LongWritable();
         VectorWritable vec = new VectorWritable();
-        for (Vector point : points) {
-            vec.set(point);
-            writer.append(new LongWritable(recNum++), vec);
+        for (Pair<Integer,Vector> kv : vectors) {
+            key.set(kv.getKey());
+            vec.set(kv.getValue());
+            writer.append(key, vec);
         }
         writer.close();
     }
   
+    public void writeClustersToFile(List<Pair<Integer,Vector>> vectors,
+                                    String fileName) throws IOException {
+        Path path = new Path(fileName);
+        SequenceFile.Writer writer = new SequenceFile.Writer(this.fs, this.conf,
+            path, Text.class, Kluster.class);
+        
+        Collections.shuffle(vectors);
+        for (int i = 0; i < this.k; i++) {
+            Vector vec = vectors.get(i).getValue();
+            Kluster cluster = new Kluster(vec, i, new CosineDistanceMeasure());
+            writer.append(new Text(cluster.getIdentifier()), cluster);
+        }
+        writer.close();
+    }
+
 //    public static List<Vector> readPoints(String inputFile, Configuration conf) throws IOException {
 //        List<Vector> points = new ArrayList<Vector>();
 //        FileSystem fs = FileSystem.get(conf);
@@ -109,58 +138,54 @@ public class KMeansProcedures {
 //        reader.close();
 //        return points;
 //    }
-  
+    public void run(String inputFile, String outputDir) throws Exception {
+        List<Pair<Integer,Vector>> vectors = this.claimReader.readPoints(inputFile);
+
+        String pointsDir = outputDir + "/points";
+        String clustersDir = outputDir + "/clusters";
+        String pointsFile = pointsDir + "/file-00001";
+        String clustersFile = clustersDir + "/part-00000";
+
+        writeVectorsToFile(vectors, pointsFile);
+        writeClustersToFile(vectors, clustersFile);
+
+        KMeansDriver.run(this.conf,
+            new Path(pointsDir),
+            new Path(clustersDir),
+            new Path("output"),
+            0.001,
+            10,
+            true,
+            0.0,
+            false);
+        
+    }
+
     public static void main(String args[]) throws Exception {
     
         String inputFile = args[0];
         int k = Integer.valueOf(args[1]);
+        String outputDir = args[2];
         System.out.println("Reading points from: " + inputFile);
-        System.out.println("K = " + String.valueOf(k));
-    
-        Configuration conf = new Configuration();
-        FileSystem fs = FileSystem.get(conf);
+        System.out.println("K:                   " + String.valueOf(k));
+        System.out.println("Output dir:          " + outputDir);
+   
+        KMeansClaims kmc = new KMeansClaims(k);
+        kmc.run(inputFile, outputDir);
 
-        List<Vector> vectors = readPoints(inputFile, conf);
-        List<Vector> vectors2 = getPoints(points);
-    
-        File testData = new File("testdata");
-        if (!testData.exists()) {
-          testData.mkdir();
-        }
-        testData = new File("testdata/points");
-        if (!testData.exists()) {
-          testData.mkdir();
-        }
+        System.exit(0);
         
-        writePointsToFile(vectors, "testdata/points/file1", fs, conf);
-        
-        Path path = new Path("testdata/clusters/part-00000");
-        SequenceFile.Writer writer = new SequenceFile.Writer(fs, conf,
-            path, Text.class, Kluster.class);
-        
-        for (int i = 0; i < k; i++) {
-          Vector vec = vectors.get(i);
-          Kluster cluster = new Kluster(vec, i, new CosineDistanceMeasure());
-          writer.append(new Text(cluster.getIdentifier()), cluster);
-        }
-        writer.close();
-        
-        KMeansDriver.run(conf, new Path("testdata/points"), new Path("testdata/clusters"),
-          new Path("output"), 0.001, 10,
-          true, 0.0, false);
-          //new Path("output"), new CosineDistanceMeasure(), 0.001, 10,
-        
-        SequenceFile.Reader reader = new SequenceFile.Reader(fs,
-            new Path("output/" + Kluster.CLUSTERED_POINTS_DIR
-                     + "/part-m-00000"), conf);
-    
-        IntWritable key = new IntWritable();
-        WeightedPropertyVectorWritable value = new WeightedPropertyVectorWritable();
-        Text dist = new Text("distance");
-        while (reader.next(key, value)) {
-          System.out.println(String.format("%.15f", Double.valueOf(value.getProperties().get(dist).toString())) + " " + value.toString() + " belongs to cluster "
-                             + key.toString());
-        }
-        reader.close();
+//        SequenceFile.Reader reader = new SequenceFile.Reader(fs,
+//            new Path("output/" + Kluster.CLUSTERED_POINTS_DIR
+//                     + "/part-m-00000"), conf);
+//    
+//        IntWritable key = new IntWritable();
+//        WeightedPropertyVectorWritable value = new WeightedPropertyVectorWritable();
+//        Text dist = new Text("distance");
+//        while (reader.next(key, value)) {
+//          System.out.println(String.format("%.15f", Double.valueOf(value.getProperties().get(dist).toString())) + " " + value.toString() + " belongs to cluster "
+//                             + key.toString());
+//        }
+//        reader.close();
     }
 }
