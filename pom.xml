@@ -121,17 +121,25 @@
         <artifactId>maven-assembly-plugin</artifactId>
         <version>2.3</version>
         <configuration>
+          <descriptorRefs>
+            <descriptorRef>jar-with-dependencies</descriptorRef>
+          </descriptorRefs>
+          <runOnlyAtExecutionRoot>true</runOnlyAtExecutionRoot>
+        </configuration>
+        <!--
+        <configuration>
           <descriptors>
             <descriptor>src/main/assembly/hadoop-job.xml</descriptor>
           </descriptors>
           <archive>
-          <!--
+          <! - -
             <manifest>
               <mainClass>com.asdaraujo.InputProcessJob</mainClass>
             </manifest>
-          -->
+          - - >
           </archive>
         </configuration>
+        -->
         <executions>
           <execution>
             <id>make-assembly</id>

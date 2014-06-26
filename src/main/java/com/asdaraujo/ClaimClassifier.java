@@ -14,6 +14,7 @@ import org.apache.mahout.classifier.sgd.L1;
 import org.apache.mahout.classifier.sgd.OnlineLogisticRegression;
 import org.apache.mahout.math.DenseVector;
 import org.apache.mahout.math.Matrix;
+import org.apache.mahout.math.NamedVector;
 import org.apache.mahout.math.Vector;
 
 public class ClaimClassifier {
@@ -35,7 +36,7 @@ public class ClaimClassifier {
     }
 
     public void run(String inputFile) throws IOException {
-        List<Pair<Integer,Vector>> vectors = this.claimReader.readPoints(inputFile);
+        List<Pair<Integer,NamedVector>> vectors = this.claimReader.readPoints(inputFile);
         train(vectors);
     }
 
@@ -53,7 +54,7 @@ public class ClaimClassifier {
         return Double.valueOf(getAsString(ref));
     }
 
-    public void train(List<Pair<Integer,Vector>> vectors) {
+    public void train(List<Pair<Integer,NamedVector>> vectors) {
         Collections.shuffle(vectors);
         System.out.printf("%d training samples\n", vectors.size());
 
@@ -65,7 +66,7 @@ public class ClaimClassifier {
         int[] bumps = new int[]{1, 2, 5};
         double lineCount = 0;
 
-        for (Pair<Integer,Vector> pair : vectors) {
+        for (Pair<Integer,NamedVector> pair : vectors) {
             int actual = pair.getKey();
             Vector v = pair.getValue();
 
@@ -77,7 +78,7 @@ public class ClaimClassifier {
             learningAlgorithm.classifyFull(p, v);
             int estimated = p.maxValueIndex();
 
-            int correct = (estimated == actual? 1 : 0);
+            int correct = (estimated == actual ? 1 : 0);
             averageCorrect = averageCorrect + (correct - averageCorrect) / mu;
 
             learningAlgorithm.train(actual, v);
