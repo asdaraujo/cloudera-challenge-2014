@@ -1,13 +1,9 @@
 package com.asdaraujo;
 
 import com.google.common.base.Charsets;
-import com.google.common.collect.Multiset;
 
 import java.io.IOException;
-import java.io.Reader;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -22,13 +18,6 @@ import org.apache.hadoop.hive.ql.io.RCFile;
 import org.apache.hadoop.hive.serde2.columnar.BytesRefArrayWritable;
 import org.apache.hadoop.hive.serde2.columnar.BytesRefWritable;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
-import org.apache.lucene.analysis.TokenStream;
-import org.apache.mahout.classifier.sgd.L1;
-import org.apache.mahout.classifier.sgd.OnlineLogisticRegression;
-import org.apache.mahout.math.DenseVector;
-import org.apache.mahout.math.Matrix;
 import org.apache.mahout.math.RandomAccessSparseVector;
 import org.apache.mahout.math.Vector;
 import org.apache.mahout.vectorizer.encoders.ConstantValueEncoder;
