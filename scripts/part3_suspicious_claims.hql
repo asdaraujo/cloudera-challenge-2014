@@ -16,7 +16,7 @@ as
 select *
 from (
   select *
-  from default.classifiedclaims
+  from classifiedclaims
   where review = 1
   order by score desc
 ) c
