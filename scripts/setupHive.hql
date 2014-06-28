@@ -1,10 +1,14 @@
+set hive.cli.errors.ignore=true;
+dfs -rm -r ${schemadir};
+set hive.cli.errors.ignore=false;
 dfs -mkdir ${schemadir};
 dfs -copyFromLocal src/main/avro/Patient.avsc ${schemadir}/;
 dfs -copyFromLocal src/main/avro/PatientClaim.avsc ${schemadir}/;
 dfs -copyFromLocal src/main/avro/InpatientData.avsc ${schemadir}/;
 dfs -copyFromLocal src/main/avro/OutpatientData.avsc ${schemadir}/;
 
-CREATE EXTERNAL TABLE ${dbname}.patient
+DROP TABLE IF EXISTS patient;
+CREATE EXTERNAL TABLE patient
   ROW FORMAT SERDE
   'org.apache.hadoop.hive.serde2.avro.AvroSerDe'
   STORED AS INPUTFORMAT
@@ -15,7 +19,8 @@ CREATE EXTERNAL TABLE ${dbname}.patient
   TBLPROPERTIES (
     'avro.schema.url'='${schemadir}/Patient.avsc');
 
-CREATE EXTERNAL TABLE ${dbname}.patientClaim
+DROP TABLE IF EXISTS patientClaim;
+CREATE EXTERNAL TABLE patientClaim
   ROW FORMAT SERDE
   'org.apache.hadoop.hive.serde2.avro.AvroSerDe'
   STORED AS INPUTFORMAT
@@ -26,7 +31,8 @@ CREATE EXTERNAL TABLE ${dbname}.patientClaim
   TBLPROPERTIES (
     'avro.schema.url'='${schemadir}/PatientClaim.avsc');
 
-CREATE EXTERNAL TABLE ${dbname}.inpatientData
+DROP TABLE IF EXISTS inpatientData;
+CREATE EXTERNAL TABLE inpatientData
   ROW FORMAT SERDE
   'org.apache.hadoop.hive.serde2.avro.AvroSerDe'
   STORED AS INPUTFORMAT
@@ -37,7 +43,8 @@ CREATE EXTERNAL TABLE ${dbname}.inpatientData
   TBLPROPERTIES (
     'avro.schema.url'='${schemadir}/InpatientData.avsc');
 
-CREATE EXTERNAL TABLE ${dbname}.outpatientData
+DROP TABLE IF EXISTS outpatientData;
+CREATE EXTERNAL TABLE outpatientData
   ROW FORMAT SERDE
   'org.apache.hadoop.hive.serde2.avro.AvroSerDe'
   STORED AS INPUTFORMAT
