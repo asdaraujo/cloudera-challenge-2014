@@ -1,3 +1,6 @@
+install.packages("data.table")
+library(data.table)
+
 # avg_charged_amount by provider_id
 
 p <- data.table(read.csv("procedures.csv",

@@ -1,12 +1,14 @@
 select provider_id
 from (
-  select provider_id, count(*) cnt
+  select
+    provider_id,
+    count(*) cnt
   from (
-    select drg code, bigint(provider_id) provider_id, row_number() over (partition by drg order by double(average_covered_charges-average_total_payments) desc) rn
-    from inpatientdata
-    union all
-    select apc code, bigint(provider_id) provider_id, row_number() over (partition by apc order by double(average_est_submitted_charges-average_total_payments) desc) rn
-    from outpatientdata
+    select
+      procedure_id,
+      bigint(provider_id) provider_id,
+      row_number() over (partition by procedure_id order by double(avg_charged_amount-avg_total_payment) desc) rn
+    from in_out_patient
   ) m
   where rn = 1
   group by provider_id
