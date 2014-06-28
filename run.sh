@@ -70,7 +70,7 @@ readonly RESULTS_DIR=${4:-results}
 echo "Results dir:  $RESULTS_DIR"
 echo ""
 
-readonly JAR_FILE=$( ls -1tr target/araujo-ccds2-*-jar-with-dependencies.jar | tail -1 )
+readonly JAR_FILE=$( ls -1tr target/araujo-ccds2-*-jar-with-dependencies.jar 2> /dev/null | tail -1 )
 if [ "$JAR_FILE" == "" ]; then
     echo "ERROR: Can't find the project jar file. Please run build.sh before running this script"
     exit 1
@@ -156,45 +156,45 @@ function part2() {
 function part3() {
     h1 "Part 3"
 
-#    h2 "Prepare data and extract features lor learning"
-#    hive -v -f scripts/part3_extractfeatures.hql \
-#        --database $DB_NAME \
-#        -hivevar inputdir=$INPUT_DIR \
-#        -hivevar outputdir=$OUTPUT_DIR || exit 1
-#
-#    h2 "Run clustering to identify negative labels"
-#    local clustering_log=/tmp/clustering.log.$$
-#    hdfs dfs -rm -R $OUTPUT_DIR/workdata $OUTPUT_DIR/mahoutdata $OUTPUT_DIR/clusteredclaims
-#    time hadoop jar $JAR_FILE \
-#        com.asdaraujo.KMeansClaims \
-#        2 \
-#        10 \
-#        $OUTPUT_DIR/patientclustering \
-#        $OUTPUT_DIR/workdata \
-#        $OUTPUT_DIR/mahoutdata \
-#        $OUTPUT_DIR/clusteredclaims \
-#        | tee $clustering_log || exit 1
-#        
-#    h2 "Find negative labels cluster from the clustering output"
-#    POSITIVE_CLUSTER=$( grep "^Cluster.*Label 1" $clustering_log | sort -k5 -n | tail -1 | awk '{gsub(",", "", $2); print $2}' )
-#    NEGATIVE_CLUSTER=$(( 1 - POSITIVE_CLUSTER ))
-#    grep "^Cluster.*Label 1" $clustering_log
-#    echo "Cluster containing the negative labels is cluster #$NEGATIVE_CLUSTER"
-#    rm -f $clustering_log
-#
-#    h2 "Prepare training and test inputs for the classifier"
-#    hive -v -f scripts/part3_prepareinput.hql \
-#        --database $DB_NAME \
-#        -hivevar outputdir=$OUTPUT_DIR \
-#        -hivevar negativeCluster=$NEGATIVE_CLUSTER || exit 1
-#
-#    h2 "Run classifier"
-#    hdfs dfs -rm -R classifiedclaims
-#    time hadoop jar $JAR_FILE \
-#        com.asdaraujo.ClaimClassifier \
-#        $OUTPUT_DIR/patienttraining \
-#        $OUTPUT_DIR/patienttest \
-#        $OUTPUT_DIR/classifiedclaims/data || exit 1
+    h2 "Prepare data and extract features lor learning"
+    hive -v -f scripts/part3_extractfeatures.hql \
+        --database $DB_NAME \
+        -hivevar inputdir=$INPUT_DIR \
+        -hivevar outputdir=$OUTPUT_DIR || exit 1
+
+    h2 "Run clustering to identify negative labels"
+    local clustering_log=/tmp/clustering.log.$$
+    hdfs dfs -rm -R $OUTPUT_DIR/workdata $OUTPUT_DIR/mahoutdata $OUTPUT_DIR/clusteredclaims > /dev/null 2>&1
+    time hadoop jar $JAR_FILE \
+        com.asdaraujo.KMeansClaims \
+        2 \
+        10 \
+        $OUTPUT_DIR/patientclustering \
+        $OUTPUT_DIR/workdata \
+        $OUTPUT_DIR/mahoutdata \
+        $OUTPUT_DIR/clusteredclaims \
+        | tee $clustering_log || exit 1
+        
+    h2 "Find negative labels cluster from the clustering output"
+    POSITIVE_CLUSTER=$( grep "^Cluster.*Label 1" $clustering_log | sort -k5 -n | tail -1 | awk '{gsub(",", "", $2); print $2}' )
+    NEGATIVE_CLUSTER=$(( 1 - POSITIVE_CLUSTER ))
+    grep "^Cluster.*Label 1" $clustering_log
+    echo "Cluster containing the negative labels is cluster #$NEGATIVE_CLUSTER"
+    rm -f $clustering_log
+
+    h2 "Prepare training and test inputs for the classifier"
+    hive -v -f scripts/part3_prepareinput.hql \
+        --database $DB_NAME \
+        -hivevar outputdir=$OUTPUT_DIR \
+        -hivevar negativeCluster=$NEGATIVE_CLUSTER || exit 1
+
+    h2 "Run classifier"
+    hdfs dfs -rm -R classifiedclaims > /dev/null 2>&1
+    time hadoop jar $JAR_FILE \
+        com.asdaraujo.ClaimClassifier \
+        $OUTPUT_DIR/patienttraining \
+        $OUTPUT_DIR/patienttest \
+        $OUTPUT_DIR/classifiedclaims/data || exit 1
 
     h2 "Isolate the top 10000 suspicious claims"
     hive -f scripts/part3_suspicious_claims.hql \
@@ -204,9 +204,9 @@ function part3() {
 }
 
 function main() {
-    #data_preparation
-    #part1
-    #part2
+    data_preparation
+    part1
+    part2
     part3
 }
 
