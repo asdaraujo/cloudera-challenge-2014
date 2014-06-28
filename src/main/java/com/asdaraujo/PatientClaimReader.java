@@ -30,7 +30,8 @@ import org.apache.mahout.vectorizer.encoders.FeatureVectorEncoder;
 import org.apache.mahout.vectorizer.encoders.StaticWordValueEncoder;
 
 public class PatientClaimReader {
-    private static final int READ_BUFFER = 104857600;
+    private static final int READ_BUFFER_SIZE = 104857600;
+    private static final char CR = 13;
 
     private int numFeatures;
     private int probes;
@@ -49,10 +50,13 @@ public class PatientClaimReader {
     private FileSystem fs;
     private LongWritable rows;
     private BytesRefArrayWritable row;
+    private boolean verbose;
+    private int spinnerState = 0;
 
-    public PatientClaimReader(String inputDir, int numFeatures, int probes) throws IOException, FileNotFoundException {
+    public PatientClaimReader(String inputDir, int numFeatures, int probes, boolean verbose) throws IOException, FileNotFoundException {
         this.numFeatures = numFeatures;
         this.probes = probes;
+        this.verbose = verbose;
         clear();
 
         this.conf = new Configuration();
@@ -99,21 +103,51 @@ public class PatientClaimReader {
         return Double.valueOf(getAsString(ref));
     }
 
+    public void close() {
+        if (reader != null) {
+            this.reader.close();
+            this.reader = null;
+        }
+        this.files = null;
+    }
+
+    private void printSpinner() {
+        switch (spinnerState) {
+            case 0:
+                System.out.printf("%c|", CR);
+                break;
+            case 1:
+                System.out.printf("%c/", CR);
+                break;
+            case 2:
+                System.out.printf("%c-", CR);
+                break;
+            case 3:
+                System.out.printf("%c\\", CR);
+                break;
+        }
+        this.spinnerState = ++spinnerState % 4;
+    }
+
     public List<Pair<Integer,NamedVector>> readPoints(int maxRecords) throws IOException {
         List<Pair<Integer,NamedVector>> vectors = new ArrayList<Pair<Integer,NamedVector>>();
         while(this.files.hasNext() || this.reader != null) {
             if (this.reader == null) {
                 Path inputFile = this.files.next().getPath();
-                System.out.println("\nReading points from: " + inputFile.toString());
+                if (this.verbose)
+                    System.out.println("\nReading points from: " + inputFile.toString());
     
                 this.reader = new RCFile.Reader(this.fs, inputFile,
-                    READ_BUFFER, this.conf, 0, fs.getFileStatus(inputFile).getLen());
+                    READ_BUFFER_SIZE, this.conf, 0, fs.getFileStatus(inputFile).getLen());
             }
 
-            while (reader.next(this.rows)) {
+            while (this.reader.next(this.rows)) {
                 if (this.rows.get() % 1000 == 0)
-                    System.out.print(".");
-                reader.getCurrentRow(this.row);
+                    if (this.verbose)
+                        System.out.print(".");
+                    else
+                        printSpinner();
+                this.reader.getCurrentRow(this.row);
                 this.recordCount++;
                 String id = getAsString(this.row.get(0));
                 int review = getAsInteger(this.row.get(1));
@@ -137,15 +171,18 @@ public class PatientClaimReader {
     
                 vectors.add(new ImmutablePair(review, new NamedVector(v, id)));
                 if (vectors.size() >= maxRecords) {
-                    System.out.println("");
+                    if (verbose)
+                        System.out.println("");
                     return vectors;
                 }
             }
-            reader.close();
-            reader = null;
-            System.out.println("");
+            this.reader.close();
+            this.reader = null;
+            if (verbose)
+                System.out.println("");
         }
-        System.out.printf("\n%d records were read successfully from file.\n", this.recordCount);
+        if (verbose)
+            System.out.printf("\n%d records were read successfully from file.\n", this.recordCount);
 
         return vectors;
     }

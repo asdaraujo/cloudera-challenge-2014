@@ -165,7 +165,7 @@ public class KMeansClaims extends KMeansDriver implements Tool {
 
     public void runClustering(int k, int iterations, String inputDir, String workDir, String mahoutDir) throws Exception {
 
-        PatientClaimReader claimReader = new PatientClaimReader(inputDir, FEATURES, 2);
+        PatientClaimReader claimReader = new PatientClaimReader(inputDir, FEATURES, 2, true);
         List<Pair<Integer,NamedVector>> vectors = claimReader.readPoints(500000);
 
         String pointsDir = workDir + "/points";
