@@ -115,7 +115,7 @@ function data_preparation() {
         $OUTPUT_DIR/outpatient || exit 1
     
     h2 "Create Hive tables to access the data"
-    hive -v -f scripts/setupHive.hql \
+    hive -v -f scripts/setup_hive.hql \
         --database $DB_NAME \
         -hivevar outputdir=$OUTPUT_DIR \
         -hivevar schemadir=$SCHEMA_DIR || exit 1
@@ -180,7 +180,6 @@ function part3() {
     h2 "Find negative labels cluster from the clustering output"
     POSITIVE_CLUSTER=$( grep "^Cluster.*Label 1" $clustering_log | sort -k5 -n | tail -1 | awk '{gsub(",", "", $2); print $2}' )
     NEGATIVE_CLUSTER=$(( 1 - POSITIVE_CLUSTER ))
-    grep "^Cluster.*Label 1" $clustering_log
     echo "Cluster containing the negative labels is cluster #$NEGATIVE_CLUSTER"
     rm -f $clustering_log
 
@@ -206,10 +205,14 @@ function part3() {
 }
 
 function main() {
+    date
+
     data_preparation
     part1
     part2
     part3
+
+    date
 }
 
 # __main__

@@ -1,25 +1,3 @@
--- all summary data (inpatient + outpatient)
-drop table if exists in_out_patient;
-create table in_out_patient
-stored as sequencefile
-as
-select *
-from (
-  select
-    'I' type, drg procedure_id, provider_id, provider_city, provider_state, provider_zipcode,
-    referral_region, total_discharges total_charges, average_covered_charges avg_charged_amount,
-    average_total_payments avg_total_payment
-  from inpatientdata
-  union all
-  select
-    'O' type, apc procedure_id, provider_id, provider_city, provider_state, provider_zipcode,
-    referral_region, outpatient_services total_charges, average_est_submitted_charges avg_charged_amount,
-    average_total_payments avg_total_payment
-  from outpatientdata
-) x
-;
-
-
 -- unique procedures
 drop table if exists procedure;
 create table procedure
