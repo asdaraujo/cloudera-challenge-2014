@@ -96,9 +96,9 @@ function data_preparation() {
     h2 "Create output dir"
     hdfs dfs -stat $OUTPUT_DIR > /dev/null 2>&1
     if [ $? == 0 ]; then
-        hdfs dfs -mv $OUTPUT_DIR $OUTPUT_DIR.$( date +%Y%m%d%H%M%S )
+        hdfs dfs -mv $OUTPUT_DIR $OUTPUT_DIR.$( date +%Y%m%d%H%M%S ) || exit 1
     fi
-    hdfs dfs -mkdir -p $OUTPUT_DIR
+    hdfs dfs -mkdir -p $OUTPUT_DIR || exit 1
     
     h2 "Run crunch job to process all the different input formats and write the data into SequenceFiles"
     time hadoop jar $JAR_FILE \
@@ -110,35 +110,35 @@ function data_preparation() {
         $OUTPUT_DIR/patientclaim \
         $OUTPUT_DIR/patient \
         $OUTPUT_DIR/inpatient \
-        $OUTPUT_DIR/outpatient
+        $OUTPUT_DIR/outpatient || exit 1
     
     h2 "Create Hive tables to access the data"
     hive -v -f scripts/setupHive.hql \
         --database $DB_NAME \
         -hivevar outputdir=$OUTPUT_DIR \
-        -hivevar schemadir=$SCHEMA_DIR
+        -hivevar schemadir=$SCHEMA_DIR || exit 1
     
     h2 "Create dir for challenge results"
     if [ -d "$RESULTS_DIR" ]; then
-        mv "$RESULTS_DIR" "$RESULTS_DIR.$( date +%Y%m%d%H%M%S )"
+        mv "$RESULTS_DIR" "$RESULTS_DIR.$( date +%Y%m%d%H%M%S )" || exit 1
     fi
-    mkdir "$RESULTS_DIR"
+    mkdir "$RESULTS_DIR" || exit 1
 }
 
 function part1() {
     h1 "Part 1"
 
     h2 "Generate results for part 1a"
-    hive --database $DB_NAME -f scripts/part1a.hql > $RESULTS_DIR/part1a.csv
+    hive --database $DB_NAME -f scripts/part1a.hql > $RESULTS_DIR/part1a.csv || exit 1
     
     h2 "Generate results for part 1b"
-    hive --database $DB_NAME -f scripts/part1b.hql > $RESULTS_DIR/part1b.csv
+    hive --database $DB_NAME -f scripts/part1b.hql > $RESULTS_DIR/part1b.csv || exit 1
     
     h2 "Generate results for part 1c"
-    hive --database $DB_NAME -f scripts/part1c.hql > $RESULTS_DIR/part1c.csv
+    hive --database $DB_NAME -f scripts/part1c.hql > $RESULTS_DIR/part1c.csv || exit 1
     
     h2 "Generate results for part 1d"
-    hive --database $DB_NAME -f scripts/part1d.hql > $RESULTS_DIR/part1d.csv
+    hive --database $DB_NAME -f scripts/part1d.hql > $RESULTS_DIR/part1d.csv || exit 1
     
 }
 
@@ -146,10 +146,10 @@ function part2() {
     h1 "Part 2"
 
     h2 "Generate results for part 2a"
-    hive --database $DB_NAME -f scripts/part2a.hql > $RESULTS_DIR/part2a.csv
+    hive --database $DB_NAME -f scripts/part2a.hql > $RESULTS_DIR/part2a.csv || exit 1
     
     h2 "Generate results for part 2b"
-    hive --database $DB_NAME -f scripts/part2b.hql > $RESULTS_DIR/part2b.csv
+    hive --database $DB_NAME -f scripts/part2b.hql > $RESULTS_DIR/part2b.csv || exit 1
 
 }
 
@@ -160,7 +160,7 @@ function part3() {
     hive -v -f scripts/part3_extractfeatures.hql \
         --database $DB_NAME \
         -hivevar inputdir=$INPUT_DIR \
-        -hivevar outputdir=$OUTPUT_DIR
+        -hivevar outputdir=$OUTPUT_DIR || exit 1
 
     h2 "Run clustering to identify negative labels"
     local clustering_log=/tmp/clustering.log.$$
@@ -173,7 +173,7 @@ function part3() {
         $OUTPUT_DIR/workdata \
         $OUTPUT_DIR/mahoutdata \
         $OUTPUT_DIR/clusteredclaims \
-        | tee $clustering_log
+        | tee $clustering_log || exit 1
         
     h2 "Find negative labels cluster from the clustering output"
     POSITIVE_CLUSTER=$( grep "^Cluster.*Label 1" $clustering_log | sort -k5 -n | tail -1 | awk '{gsub(",", "", $2); print $2}' )
@@ -186,7 +186,7 @@ function part3() {
     hive -v -f scripts/part3_prepareinput.hql \
         --database $DB_NAME \
         -hivevar outputdir=$OUTPUT_DIR \
-        -hivevar negativeCluster=$NEGATIVE_CLUSTER
+        -hivevar negativeCluster=$NEGATIVE_CLUSTER || exit 1
 
     h2 "Run classifier"
     hdfs dfs -rm -R classifiedclaims
@@ -194,26 +194,26 @@ function part3() {
         com.asdaraujo.ClaimClassifier \
         $OUTPUT_DIR/patienttraining \
         $OUTPUT_DIR/patienttest \
-        $OUTPUT_DIR/classifiedclaims/data
+        $OUTPUT_DIR/classifiedclaims/data || exit 1
 
     h2 "Isolate the top 10000 suspicious claims"
     hive -v -f scripts/part3_suspicious_claims.hql \
         --database $DB_NAME \
-        -hivevar outputdir=$OUTPUT_DIR
+        -hivevar outputdir=$OUTPUT_DIR || exit 1
 
     h2 "Write results file"
     hive -v -f scripts/part3_suspicious_claims.hql \
         --database $DB_NAME \
-        -hivevar outputdir=$OUTPUT_DIR > $RESULTS_DIR/part3.csv
+        -hivevar outputdir=$OUTPUT_DIR > $RESULTS_DIR/part3.csv || exit 1
 
 }
 
 function main() {
-    data_preparation
-    part1
-    part2
+    #data_preparation
+    #part1
+    #part2
     part3
 }
 
-     __main__
+# __main__
 main
