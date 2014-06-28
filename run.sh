@@ -74,6 +74,8 @@ readonly JAR_FILE=$( ls -1tr target/araujo-ccds2-*-jar-with-dependencies.jar 2> 
 if [ "$JAR_FILE" == "" ]; then
     echo "ERROR: Can't find the project jar file. Please run build.sh before running this script"
     exit 1
+else
+    echo "Jar file:     $JAR_FILE"
 fi
 
 function h1() {
