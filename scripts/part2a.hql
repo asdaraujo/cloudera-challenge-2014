@@ -1,24 +1,22 @@
-select 
+select
   provider_id
 from (
   select
-    b.provider_id,
-    (avg_charged_amount-mean_avg_charged_amount)/sd_avg_charged_amount as z
+    cast(p.provider_id as int) as provider_id, type,
+    avg((p.avg_charged_amount-s.mean_avg_charged_amount)/s.sd_avg_charged_amount) as mean_z,
+    stddev((p.avg_charged_amount-s.mean_avg_charged_amount)/s.sd_avg_charged_amount) as sd_z
   from
-    (select 
-       procedure_id, 
+    (select
+       procedure_id,
        avg(avg_charged_amount) as mean_avg_charged_amount,
        stddev(avg_charged_amount) as sd_avg_charged_amount
      from in_out_patient
-     group by procedure_id) a
-    join
-    (select
-       procedure_id, provider_id,
-       sum(total_charges*avg_charged_amount)/sum(total_charges) as avg_charged_amount
-     from in_out_patient
-     group by procedure_id, provider_id) b
-      on (a.procedure_id = b.procedure_id)
-  order by z desc
+     group by procedure_id) s
+    join in_out_patient p
+      on (p.procedure_id = s.procedure_id)
+  group by cast(p.provider_id as int), type
+  order by mean_z desc
   limit 3
 ) x
 ;
+
