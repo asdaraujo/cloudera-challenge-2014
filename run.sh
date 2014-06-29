@@ -190,7 +190,7 @@ function part3() {
         -hivevar negativeCluster=$NEGATIVE_CLUSTER || exit 1
 
     h2 "Run classifier"
-    hdfs dfs -rm -R classifiedclaims > /dev/null 2>&1
+    hdfs dfs -rm -R $OUTPUT_DIR/classifiedclaims > /dev/null 2>&1
     time hadoop jar $JAR_FILE \
         com.asdaraujo.ClaimClassifier \
         $OUTPUT_DIR/patienttraining \
