@@ -2,8 +2,8 @@ select
   provider_id
 from (
   select
-    cast(p.provider_id as int) as provider_id, type,
-    avg((p.avg_charged_amount-s.mean_avg_charged_amount)/s.sd_avg_charged_amount) as mean_z,
+    cast(p.provider_id as int) as provider_id,
+    type,
     stddev((p.avg_charged_amount-s.mean_avg_charged_amount)/s.sd_avg_charged_amount) as sd_z
   from
     (select
@@ -15,7 +15,7 @@ from (
     join in_out_patient p
       on (p.procedure_id = s.procedure_id)
   group by cast(p.provider_id as int), type
-  order by mean_z desc
+  order by sd_z desc
   limit 3
 ) x
 ;

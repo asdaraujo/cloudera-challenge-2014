@@ -4,7 +4,6 @@ from (
   select
     p.referral_region,
     p.type,
-    avg((p.avg_charged_amount-s.mean_avg_charged_amount)/s.sd_avg_charged_amount) as mean_z,
     stddev((p.avg_charged_amount-s.mean_avg_charged_amount)/s.sd_avg_charged_amount) as sd_z
   from
     (select
@@ -17,7 +16,7 @@ from (
       on (p.procedure_id = s.procedure_id)
   group by p.referral_region, p.type
   order by sd_z desc
-  limit 10
+  limit 3
 ) x
 ;
 
