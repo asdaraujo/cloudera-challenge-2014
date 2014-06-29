@@ -2,7 +2,7 @@
 Author: André Araújo <araujo@pythian.com><br>*June/2014*
 
 This repository contains and documents my submission to the Cloudera Data Science Challenge of 2014.
-For more information about the implementation, please refer to the PDF document in the doc directory.
+For more information about the implementation, please refer to the PDF document in the `doc` directory.
 
 ## Pre-requisites
 
